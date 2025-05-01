@@ -12,6 +12,7 @@ export default class GuiManager {
      * @param {function(object): void} callbacks.onColorChange - Called when color parameters change.
      * @param {function(object): void} callbacks.onBloomChange - Called when bloom parameters change.
      * @param {function(string): void} callbacks.onEffectChange - Called when the visual effect selection changes.
+     * @param {function(): void} callbacks.onFileUploadRequest - Called when the user clicks the upload button.
      */
     constructor(params, callbacks) {
         /** @type {GUI} The dat.gui instance */
@@ -24,6 +25,7 @@ export default class GuiManager {
         this._setupColorControls();
         this._setupBloomControls();
         this._setupEffectControls();
+        this._setupUploadControl();
     }
 
     /**
@@ -94,6 +96,23 @@ export default class GuiManager {
                      this.callbacks.onEffectChange(value); // Pass the selected effect name string
                  }
             });
+    }
+
+    /**
+     * Sets up the dat.gui control for triggering the audio file upload.
+     * @private
+     */
+    _setupUploadControl() {
+        // Add a simple object with a function property to act as the button's action
+        const uploadTrigger = {
+            upload: () => {
+                if (this.callbacks.onFileUploadRequest) {
+                    this.callbacks.onFileUploadRequest();
+                }
+            }
+        };
+        // Add the button to the main GUI
+        this.gui.add(uploadTrigger, 'upload').name('Upload Audio');
     }
 
     // Optional: Method to hide/show GUI

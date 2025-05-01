@@ -43,12 +43,29 @@ let guiManager = null;
 let postProcessor = null;
 /** @type {THREE.Clock} Used for getting delta time and elapsed time */
 const clock = new THREE.Clock();
+/** @type {HTMLInputElement | null} Hidden file input for audio */
+let hiddenFileInput = null;
 
 // --- Initialization Function ---
 /**
  * Initializes all application modules and starts the animation loop.
  */
 function init() {
+    // --- Create Hidden File Input ---
+    hiddenFileInput = document.createElement('input');
+    hiddenFileInput.type = 'file';
+    hiddenFileInput.accept = 'audio/*';
+    hiddenFileInput.style.display = 'none'; // Keep it hidden
+    hiddenFileInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file && audioManager) {
+            audioManager.loadAndPlayFile(file);
+        }
+        // Reset the input value to allow uploading the same file again
+        event.target.value = null; 
+    });
+    document.body.appendChild(hiddenFileInput); // Add it to the DOM
+
     // 1. Initialize Core Scene
     sceneManager = new SceneManager(); 
     
@@ -88,6 +105,12 @@ function init() {
             if (sceneManager) {
                 sceneManager.setActiveEffect(effectName); 
             }
+        },
+        /** Triggers the hidden file input click */
+        onFileUploadRequest: () => {
+            if (hiddenFileInput) {
+                hiddenFileInput.click();
+            }
         }
     };
     // Create the GUI, passing the initial parameters and the callbacks
@@ -113,7 +136,7 @@ function init() {
 function setupEventListeners() {
     window.addEventListener('resize', onWindowResize);
     document.addEventListener('mousemove', onMouseMove);
-    // Note: File input listener is handled within AudioManager
+    // Note: File input is now triggered via GuiManager and handled in init()
 }
 
 /**

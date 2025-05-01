@@ -26,44 +26,23 @@ export default class AudioManager {
         this.audioContext = null; 
 
         // Create and manage the file input element
-        this._createFileInput();
+        // REMOVED: this._createFileInput(); // Input creation moved to main.js/GuiManager
     }
 
     /**
-     * Creates the HTML file input element for audio files and adds it to the DOM.
-     * @private
+     * Loads the selected audio file, decodes it, and starts playback.
+     * This method is now intended to be called externally with a File object.
+     * @param {File} file - The audio file to load.
      */
-    _createFileInput() {
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.accept = 'audio/*'; // Accept all audio formats
-        // Basic styling to position the input element
-        fileInput.style.position = 'absolute'; 
-        fileInput.style.top = '20px';
-        fileInput.style.left = '50%';
-        fileInput.style.transform = 'translateX(-50%)'; // Center horizontally
-        fileInput.style.zIndex = '10'; // Ensure it's above the Three.js canvas
-        fileInput.addEventListener('change', this._handleFileUpload.bind(this)); // Bind 'this' for the callback
-
-        // Append the input to the body. Consider a dedicated UI container later.
-        document.body.appendChild(fileInput); 
-    }
-
-    /**
-     * Handles the 'change' event of the file input.
-     * Reads the selected audio file, decodes it, and starts playback.
-     * @param {Event} event - The file input change event.
-     * @private
-     */
-    _handleFileUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return; // Exit if no file was selected
+    loadAndPlayFile(file) { // Renamed from _handleFileUpload and takes file directly
+        // const file = event.target.files[0]; // REMOVED: File comes from parameter now
+        if (!file) return; // Exit if no file was provided
 
         // Basic validation
         if (!file.type.startsWith('audio/')) {
             console.warn('Invalid file type. Please upload an audio file.');
             alert('请上传音频文件！'); // User feedback in Chinese
-            event.target.value = null; // Reset input
+            // event.target.value = null; // REMOVED: Input is managed externally
             return;
         }
 
@@ -114,19 +93,19 @@ export default class AudioManager {
                 .catch(error => {
                     console.error('Error decoding audio data:', error);
                     alert('音频文件解码失败！'); // User feedback
-                    event.target.value = null; // Reset input on error
+                    // event.target.value = null; // REMOVED: Input is managed externally
                 });
         };
 
         reader.onerror = (error) => {
             console.error('Error reading file:', error);
             alert('文件读取失败！'); // User feedback
-            event.target.value = null; // Reset input on error
+            // event.target.value = null; // REMOVED: Input is managed externally
         };
 
         // Read the file contents as an ArrayBuffer
         reader.readAsArrayBuffer(file);
-        event.target.value = null; // Reset input after starting read
+        // event.target.value = null; // REMOVED: Input is managed externally
     }
     
     /**
