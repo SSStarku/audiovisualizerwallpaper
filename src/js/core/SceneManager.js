@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import vertexShader from '../../shaders/vertex.glsl';
 import fragmentShader from '../../shaders/fragment.glsl';
 import ParticleEffect from '../effects/ParticleEffect';
@@ -8,6 +9,8 @@ import ParticleEffect from '../effects/ParticleEffect';
  * camera, renderer, and the primary visualizer mesh.
  */
 export default class SceneManager {
+    /** @type {OrbitControls | null} */
+    controls = null;
     /**
      * Initializes the scene, camera, renderer, and visualizer mesh.
      */
@@ -48,6 +51,7 @@ export default class SceneManager {
         
         this._setupRenderer();
         this._setupCamera();
+        this._setupControls();
         this._createVisualizerMesh();
         this._createParticleEffect();
     }
@@ -72,6 +76,17 @@ export default class SceneManager {
         this.camera.position.set(0, -2, 14); // Position the camera
         this.camera.lookAt(0, 0, 0); // Point the camera at the scene center
         // Note: The AudioListener is added in AudioManager, passing this camera.
+    }
+
+    /**
+     * Sets up the OrbitControls.
+     * @private
+     */
+    _setupControls() {
+        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableDamping = true; // 可选: 启用阻尼效果，使控制更平滑
+        this.controls.dampingFactor = 0.05; // 可选: 阻尼系数
+        // this.controls.autoRotate = true; // 可选: 自动旋转
     }
 
     /**
@@ -125,16 +140,11 @@ export default class SceneManager {
      * @param {{mouseX: number, mouseY: number}} interactionData Data from user interactions (e.g., mouse position).
      */
     update(deltaTime, elapsedTime, interactionData) {
-        // Example: Smoothly move camera based on normalized mouse coordinates
-        if (interactionData) {
-            const targetX = interactionData.mouseX;
-            const targetY = -interactionData.mouseY -2; // Offset Y slightly
-            // Use lerp for smoother camera movement
-            this.camera.position.x = THREE.MathUtils.lerp(this.camera.position.x, targetX, 0.05);
-            this.camera.position.y = THREE.MathUtils.lerp(this.camera.position.y, targetY, 0.05);
-            this.camera.lookAt(this.scene.position); // Keep looking at the center
+        // 如果启用了阻尼或自动旋转，则必须在动画循环中调用 update
+        if (this.controls) {
+            this.controls.update(); 
         }
-        
+
         // Update the time uniform for shader animations
         // Frequency and color uniforms are updated via updateShaderUniforms
         // this.uniforms.u_time.value = elapsedTime;
@@ -236,6 +246,11 @@ export default class SceneManager {
         if (this.particleEffect) {
             this.particleEffect.dispose();
         }
+        
+        // Dispose controls if they exist and have a dispose method (OrbitControls doesn't)
+        // if (this.controls && typeof this.controls.dispose === 'function') {
+        //     this.controls.dispose();
+        // }
         
         // Dispose renderer if needed (though typically managed elsewhere)
         // if (this.renderer) {
