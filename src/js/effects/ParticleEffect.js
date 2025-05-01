@@ -10,16 +10,16 @@ export default class ParticleEffect {
      * @param {object} options - Configuration options for the particle effect.
      * @param {number} [options.particleCount=10000] - The number of particles to create.
      * @param {number} [options.radius=5] - The radius of the circular area for particles.
-     * @param {number} [options.particleSize=0.05] - The size of each particle.
+     * @param {number} [options.particleSize=0.1] - The size of each particle.
      * @param {number} [options.maxKickForce=10] - Maximum upward force applied based on audio frequency.
      * @param {number} [options.gravity=-9.8] - Gravity force applied to particles.
      */
     constructor(scene, options = {}) {
         this.scene = scene;
         // Apply defaults if options are not provided
-        this.particleCount = options.particleCount || 10000;
+        this.particleCount = options.particleCount || 10000000;
         this.radius = options.radius || 5; 
-        this.particleSize = options.particleSize || 0.05;
+        this.particleSize = options.particleSize || 0.01;
         this.maxKickForce = options.maxKickForce || 10; // Controls jump height sensitivity
         this.gravity = options.gravity || -9.8;        // Controls how fast particles fall
 
@@ -44,15 +44,18 @@ export default class ParticleEffect {
         this.geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(this.particleCount * 3); // x, y, z
 
-        // Initialize positions within a circle on the XZ plane (y=0)
+        // --- Define a small radius for initial spawn at the center ---
+        const initialSpawnRadius = 0.01; // Very small radius for starting cluster
+
+        // Initialize positions clustered at the center on the XZ plane (y=0)
         for (let i = 0; i < this.particleCount; i++) {
             const angle = Math.random() * Math.PI * 2;
-            // Distribute points more evenly within the circle using sqrt(random)
-            const r = this.radius * Math.sqrt(Math.random()); 
+            // Distribute points within the very small initial radius
+            const r = initialSpawnRadius * Math.sqrt(Math.random()); 
             
-            positions[i * 3] = Math.cos(angle) * r;       // x
-            positions[i * 3 + 1] = 0;                      // y (start on the plane)
-            positions[i * 3 + 2] = Math.sin(angle) * r;       // z
+            positions[i * 3] = Math.cos(angle) * r;       // x (close to 0)
+            positions[i * 3 + 1] = 0;                      // y (on the plane)
+            positions[i * 3 + 2] = Math.sin(angle) * r;       // z (close to 0)
 
             // Initialize Y velocity to 0
             this.velocities[i] = 0; 
@@ -77,8 +80,8 @@ export default class ParticleEffect {
     }
 
     /**
-     * Updates the particle positions based on simulated physics (gravity) 
-     * and audio frequency (upward kicks).
+     * Updates the particle positions based on simulated physics (gravity)
+     * and audio frequency (upward kicks and radial expansion).
      * Called in the main animation loop.
      * @param {number} deltaTime Time since the last frame.
      * @param {number} elapsedTime Total time elapsed since start.
@@ -90,43 +93,82 @@ export default class ParticleEffect {
         }
 
         const positions = this.geometry.attributes.position.array;
-        
-        // Normalize frequency influence (0 to 1) - Adjust divisor (e.g., 80) based on testing
-        // Lower divisor = more sensitive to lower frequencies
-        const freqInfluence = Math.min(Math.max(audioFrequency / 80.0, 0), 1.0); 
+
+        // Normalize frequency influence (0 to 1) - Adjust divisor based on testing
+        const freqInfluence = Math.min(Math.max(audioFrequency / 180.0, 0), 1.0);
         const currentKickStrength = this.maxKickForce * freqInfluence;
-        
-        // Threshold to trigger a kick - only kick if frequency is somewhat significant
-        const kickThreshold = 0.1; // Corresponds to audioFrequency > 8 in this case
+        const kickThreshold = 0; // Only kick if frequency is somewhat significant
+
+        // --- New parameters for radial expansion ---
+        const expansionSpeed = 2.0; // Base speed of outward movement
+        const resetRadius = this.radius * 1.5; // Radius at which particles reset to center
+        const centerSpawnRadius = 0.1; // Small radius around the center for respawning
+        const dampeningFactor = 0.98; // Slows down outward speed over time (optional, might need adjustment)
+        // Pre-calculate squared spawn radius for efficiency
+        const centerSpawnRadiusSq = centerSpawnRadius * centerSpawnRadius; 
 
         for (let i = 0; i < this.particleCount; i++) {
-            const idx = i * 3; // Base index for this particle's position (x, y, z)
-            const yIdx = idx + 1; // Index for the y-coordinate
+            const idx = i * 3;    // Base index for this particle's position (x, y, z)
+            const xIdx = idx;
+            const yIdx = idx + 1;
+            const zIdx = idx + 2;
             const velIdx = i;     // Index for the y-velocity
 
-            // 1. Apply Gravity to velocity
-            this.velocities[velIdx] += this.gravity * deltaTime;
+            // --- Calculate distance early for use in both Y and XZ logic ---
+            const x = positions[xIdx];
+            const z = positions[zIdx];
+            const distSq = x * x + z * z; // Use squared distance
 
-            // 2. Update position based on velocity
+            // --- Y-axis movement (Gravity and Kick) ---
+            this.velocities[velIdx] += this.gravity * deltaTime;
             positions[yIdx] += this.velocities[velIdx] * deltaTime;
 
-            // 3. Check for collision with the "floor" (y=0)
             if (positions[yIdx] <= 0) {
-                positions[yIdx] = 0; // Reset position to floor
-
-                // If there's enough audio frequency, apply an upward kick
-                if (freqInfluence > kickThreshold) {
-                    // Apply kick - add some randomness to make it look more natural
+                positions[yIdx] = 0;
+                // Apply kick ONLY if frequency is high AND particle is outside the immediate spawn center
+                if (freqInfluence > kickThreshold && distSq > centerSpawnRadiusSq) { 
+                    // Apply kick - add some randomness
                     this.velocities[velIdx] = currentKickStrength * (0.5 + Math.random() * 0.5);
                 } else {
-                    // Otherwise, stop the particle on the floor
+                    // Otherwise, ensure velocity is zero (especially for newly spawned particles in the center)
                     this.velocities[velIdx] = 0; 
                 }
+            }
+
+            // --- XZ-plane movement (Radial Expansion based on Frequency) ---
+            const resetRadiusSq = resetRadius * resetRadius;
+            
+            // Reset particle if it goes too far or randomly sometimes (to ensure center fill)
+            if (distSq > resetRadiusSq || Math.random() < 0.0005) { 
+                // Reset to a random position near the center
+                const angle = Math.random() * Math.PI * 2;
+                const r = centerSpawnRadius * Math.sqrt(Math.random()); // Even distribution near center
+                positions[xIdx] = Math.cos(angle) * r;
+                positions[zIdx] = Math.sin(angle) * r;
+                positions[yIdx] = 0; // Ensure it starts on the ground
+                this.velocities[velIdx] = 0; // Reset vertical velocity
+                // Optionally reset radial velocity if we store it separately later
+            } else if (distSq > 0.001 && freqInfluence > kickThreshold) { // Avoid division by zero and only expand when kicking
+                const dist = Math.sqrt(distSq);
+                const nx = x / dist; // Normalized direction x
+                const nz = z / dist; // Normalized direction z
+
+                // Calculate speed based on frequency, maybe less speed further out?
+                // Simple model: speed proportional to frequency influence
+                const currentExpansionSpeed = expansionSpeed * freqInfluence; 
+
+                // Update position radially
+                positions[xIdx] += nx * currentExpansionSpeed * deltaTime;
+                positions[zIdx] += nz * currentExpansionSpeed * deltaTime;
+
+                // Optional: Apply dampening to radial movement (can be complex to add velocity state)
+                // This simple implementation doesn't store radial velocity, so dampening is harder.
+                // For now, the reset mechanism handles particles getting too far.
             }
         }
 
         // Important: Mark the position attribute as needing update for Three.js
-        this.geometry.attributes.position.needsUpdate = true; 
+        this.geometry.attributes.position.needsUpdate = true;
     }
 
     /**
