@@ -21,7 +21,7 @@ export default class ParticleEffect {
         this.radius = options.radius || 5; 
         this.particleSize = options.particleSize || 0.01;
         this.maxKickForce = options.maxKickForce || 10; // Controls jump height sensitivity
-        this.gravity = options.gravity || -9.8;        // Controls how fast particles fall
+        this.gravity = options.gravity || -19.8;        // Controls how fast particles fall
 
         this.particles = null; 
         this.geometry = null; 

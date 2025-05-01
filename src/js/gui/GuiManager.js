@@ -13,6 +13,7 @@ export default class GuiManager {
      * @param {function(object): void} callbacks.onBloomChange - Called when bloom parameters change.
      * @param {function(string): void} callbacks.onEffectChange - Called when the visual effect selection changes.
      * @param {function(): void} callbacks.onFileUploadRequest - Called when the user clicks the upload button.
+     * @param {function(): void} callbacks.onMicInputRequest - Called when the user clicks the microphone input button.
      */
     constructor(params, callbacks) {
         /** @type {GUI} The dat.gui instance */
@@ -26,6 +27,7 @@ export default class GuiManager {
         this._setupBloomControls();
         this._setupEffectControls();
         this._setupUploadControl();
+        this._setupMicInputControl();
     }
 
     /**
@@ -113,6 +115,23 @@ export default class GuiManager {
         };
         // Add the button to the main GUI
         this.gui.add(uploadTrigger, 'upload').name('Upload Audio');
+    }
+
+    /**
+     * Sets up the dat.gui control for triggering microphone input.
+     * @private
+     */
+    _setupMicInputControl() {
+        const micTrigger = {
+            startMic: () => {
+                if (this.callbacks.onMicInputRequest) {
+                    console.log("Mic input button clicked, requesting mic input...");
+                    this.callbacks.onMicInputRequest();
+                }
+            }
+        };
+        // Add the button to the main GUI
+        this.gui.add(micTrigger, 'startMic').name('Use Microphone');
     }
 
     // Optional: Method to hide/show GUI

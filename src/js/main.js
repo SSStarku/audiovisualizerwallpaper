@@ -111,6 +111,14 @@ function init() {
             if (hiddenFileInput) {
                 hiddenFileInput.click();
             }
+        },
+        /** Triggers the microphone input start */
+        onMicInputRequest: () => {
+            // Call startMicrophoneInput on the audioManager instance
+            // Use optional chaining and an arrow function to preserve `this` context implicitly
+            if (audioManager) {
+                audioManager.startMicrophoneInput(); 
+            }
         }
     };
     // Create the GUI, passing the initial parameters and the callbacks

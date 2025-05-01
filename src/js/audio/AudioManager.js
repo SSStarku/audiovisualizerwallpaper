@@ -24,9 +24,32 @@ export default class AudioManager {
         this.audioAnalyser = null;
         /** @type {AudioContext | null} The underlying Web Audio API context */
         this.audioContext = null; 
+        /** @type {MediaStreamAudioSourceNode | null} Source node for microphone input */
+        this.microphoneSource = null;
+        /** @type {AnalyserNode | null} The underlying Web Audio API AnalyserNode */
+        this.nativeAnalyser = null;
 
         // Create and manage the file input element
         // REMOVED: this._createFileInput(); // Input creation moved to main.js/GuiManager
+    }
+
+    /**
+     * Initializes the AudioContext if it doesn't exist or is closed.
+     * Resumes the context if it's suspended.
+     * @returns {Promise<AudioContext>} A promise that resolves with the active AudioContext.
+     * @private
+     */
+    async _ensureAudioContext() {
+        if (!this.audioContext || this.audioContext.state === 'closed') {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.listener.context = this.audioContext; // Link listener to this context
+            console.log("AudioContext created.");
+        } else if (this.audioContext.state === 'suspended') {
+            console.log("AudioContext suspended. Resuming...");
+            await this.audioContext.resume();
+            console.log("AudioContext resumed.");
+        }
+        return this.audioContext;
     }
 
     /**
@@ -69,32 +92,7 @@ export default class AudioManager {
 
             // --- Setup Audio Context --- 
             // Reuse or create the AudioContext. Crucial for browser compatibility and resource management.
-            if (!this.audioContext) {
-                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                this.listener.context = this.audioContext; // Link listener to this context
-            } else if (this.audioContext.state === 'suspended') {
-                 // Attempt to resume the context if it was suspended (e.g., by browser autoplay policies)
-                this.audioContext.resume().catch(err => console.error("Error resuming AudioContext:", err));
-            }
-
-            // --- Decode and Play --- 
-            this.audioContext.decodeAudioData(audioData)
-                .then(buffer => {
-                    // Double-check context state before proceeding
-                    if (this.audioContext.state !== 'running') {
-                         console.warn('AudioContext is not running after decode. Attempting resume again...');
-                         // Attempt to resume and then play
-                         return this.audioContext.resume().then(() => this._setupAndPlay(buffer))
-                                                    .catch(err => console.error("Error resuming context before playback:", err));
-                     } else {
-                         this._setupAndPlay(buffer); // Context is running, proceed directly
-                     }
-                })
-                .catch(error => {
-                    console.error('Error decoding audio data:', error);
-                    alert('音频文件解码失败！'); // User feedback
-                    // event.target.value = null; // REMOVED: Input is managed externally
-                });
+            this._setupAndPlay(audioData);
         };
 
         reader.onerror = (error) => {
@@ -114,29 +112,124 @@ export default class AudioManager {
      * @param {AudioBuffer} buffer - The decoded audio data.
      * @private
      */
-    _setupAndPlay(buffer) {
+    async _setupAndPlay(buffer) {
+        await this._ensureAudioContext(); // Ensure context is active
+
+        // --- Stop microphone if active ---
+        this._disconnectMicrophone(); 
+
         this.sound.setBuffer(buffer); // Assign the decoded buffer to the sound source
         this.sound.setLoop(true); // Loop the audio
         this.sound.setVolume(0.5); // Set a default volume
-        this.sound.play(); // Start playback
+        
 
-        // Create a new analyser for the currently playing sound
-        // fftSize must be a power of 2 (e.g., 32, 64, 128, ...). Higher values give more frequency bins.
+        // Create a new THREE analyser for the currently playing sound
         const fftSize = 64; 
+        // Use THREE.AudioAnalyser for file playback
         this.audioAnalyser = new THREE.AudioAnalyser(this.sound, fftSize); 
-        console.log(`Audio loaded and playing. Analyser FFT size: ${fftSize}.`);
+        // Clear native analyser reference if it exists from mic input
+        this.nativeAnalyser = null; 
+        console.log(`File audio loaded and playing. Analyser FFT size: ${fftSize}.`);
+        
+        // Start playback *after* setting up the analyser node connection internally by THREE
+        this.sound.play(); 
     }
 
     /**
-     * Gets the average frequency value from the AudioAnalyser.
+     * Requests microphone access, creates an audio source, and connects it for analysis.
+     */
+    async startMicrophoneInput() {
+        try {
+            await this._ensureAudioContext(); // Ensure context is active
+
+            // --- Stop file playback if active ---
+            if (this.sound && this.sound.isPlaying) {
+                this.sound.stop();
+                console.log("Stopped file playback for microphone input.");
+            }
+            // Disconnect THREE's analyser if it exists
+            if (this.audioAnalyser) {
+                try {
+                   if (this.audioAnalyser.analyser) {
+                       this.audioAnalyser.analyser.disconnect();
+                   }
+                } catch(e) { console.warn("Error disconnecting THREE analyser:", e);}
+                this.audioAnalyser = null; 
+            }
+            // --- Cleanup previous microphone source ---
+            this._disconnectMicrophone();
+
+
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            console.log("Microphone access granted.");
+
+            this.microphoneSource = this.audioContext.createMediaStreamSource(stream);
+            
+            // Use the native Web Audio API AnalyserNode directly for mic input
+            const fftSize = 64;
+            this.nativeAnalyser = this.audioContext.createAnalyser();
+            this.nativeAnalyser.fftSize = fftSize;
+
+            // Connect microphone source to the native analyser
+            this.microphoneSource.connect(this.nativeAnalyser);
+            
+            // DO NOT connect the microphone source to the listener's destination 
+            // unless you want to hear the microphone input through the speakers.
+            // this.microphoneSource.connect(this.listener.context.destination); 
+
+            console.log(`Microphone input started. Native Analyser FFT size: ${fftSize}.`);
+
+        } catch (error) {
+            console.error('Error accessing microphone:', error);
+            alert('无法访问麦克风，请检查权限。'); // User feedback
+            // Handle error (e.g., show a message to the user)
+        }
+    }
+
+    /**
+     * Disconnects the microphone source and analyser node if they exist.
+     * @private
+     */
+    _disconnectMicrophone() {
+        if (this.microphoneSource) {
+            // Disconnect from all destinations
+            this.microphoneSource.disconnect(); 
+            // Stop the tracks to release the microphone
+            this.microphoneSource.mediaStream.getTracks().forEach(track => track.stop());
+            this.microphoneSource = null;
+            console.log("Microphone source disconnected and tracks stopped.");
+        }
+         if (this.nativeAnalyser) {
+             this.nativeAnalyser.disconnect(); // Disconnect analyser as well
+             this.nativeAnalyser = null;
+             console.log("Native analyser disconnected.");
+         }
+    }
+
+    /**
+     * Gets the average frequency value from the active AudioAnalyser (THREE or native).
      * @returns {number} The average frequency value (typically 0-255), or 0 if unavailable.
      */
     getAverageFrequency() {
-        if (this.audioAnalyser) {
-            // This method computes the average of the frequency data array
+        // Prioritize native analyser if mic is active
+        if (this.nativeAnalyser) {
+            // Need a buffer to store the frequency data
+            const bufferLength = this.nativeAnalyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            this.nativeAnalyser.getByteFrequencyData(dataArray); // Fill the array
+
+            // Calculate the average
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                sum += dataArray[i];
+            }
+            return sum / bufferLength;
+        } 
+        // Fallback to THREE's analyser if file is playing
+        else if (this.audioAnalyser) {
             return this.audioAnalyser.getAverageFrequency();
         }
-        return 0; // Return 0 if analyser isn't ready or audio isn't playing
+        return 0; // Return 0 if no analyser is active
     }
 
     // --- Optional Playback Controls --- 
