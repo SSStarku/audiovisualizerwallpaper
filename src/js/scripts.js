@@ -69,39 +69,91 @@ const listener = new THREE.AudioListener();
 camera.add(listener);
 
 const sound = new THREE.Audio(listener);
-
-const audioLoader = new THREE.AudioLoader();
-audioLoader.load('./assets/Beats.mp3', function(buffer) {
-	sound.setBuffer(buffer);
-	window.addEventListener('click', function() {
-		sound.play();
-	});
-});
-
-const analyser = new THREE.AudioAnalyser(sound, 32);
+let audioAnalyser = null;
 
 const gui = new GUI();
 
 const colorsFolder = gui.addFolder('Colors');
 colorsFolder.add(params, 'red', 0, 1).onChange(function(value) {
-	uniforms.u_red.value = Number(value);
+    uniforms.u_red.value = Number(value);
 });
 colorsFolder.add(params, 'green', 0, 1).onChange(function(value) {
-	uniforms.u_green.value = Number(value);
+    uniforms.u_green.value = Number(value);
 });
 colorsFolder.add(params, 'blue', 0, 1).onChange(function(value) {
-	uniforms.u_blue.value = Number(value);
+    uniforms.u_blue.value = Number(value);
 });
 
 const bloomFolder = gui.addFolder('Bloom');
 bloomFolder.add(params, 'threshold', 0, 1).onChange(function(value) {
-	bloomPass.threshold = Number(value);
+    bloomPass.threshold = Number(value);
 });
 bloomFolder.add(params, 'strength', 0, 3).onChange(function(value) {
-	bloomPass.strength = Number(value);
+    bloomPass.strength = Number(value);
 });
 bloomFolder.add(params, 'radius', 0, 1).onChange(function(value) {
-	bloomPass.radius = Number(value);
+    bloomPass.radius = Number(value);
+});
+
+// 处理文件上传
+function handleFileUpload(event) {
+    const file = event.target.files[0];
+    
+    // 验证文件类型
+    if (!file.type.startsWith('audio/')) {
+        alert('请上传音频文件！');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const audioData = e.target.result;
+        
+        // 停止当前播放的音频
+        if (sound.isPlaying) {
+            sound.stop();
+        }
+        
+        // 创建音频上下文并加载音频数据
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        audioContext.decodeAudioData(audioData)
+            .then(buffer => {
+                sound.setBuffer(buffer);
+                sound.play();
+                
+                // 更新音频分析器
+                if (audioAnalyser) {
+                    audioAnalyser.analyser.disconnect();
+                }
+                audioAnalyser = new THREE.AudioAnalyser(sound, 32);
+            })
+            .catch(error => {
+                console.error('Error decoding audio data:', error);
+                alert('音频文件解码失败！');
+            });
+    };
+    
+    reader.onerror = function(error) {
+        console.error('Error reading file:', error);
+        alert('文件读取失败！');
+    };
+    
+    reader.readAsArrayBuffer(file);
+}
+
+// 添加文件上传监听器
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'audio/*';
+    fileInput.style.margin = '20px';
+    fileInput.addEventListener('change', handleFileUpload);
+    
+    const container = document.createElement('div');
+    container.style.textAlign = 'center';
+    container.appendChild(fileInput);
+    
+    document.body.insertBefore(container, document.body.firstChild);
 });
 
 let mouseX = 0;
@@ -119,8 +171,13 @@ function animate() {
 	camera.position.y += (-mouseY - camera.position.y) * 0.5;
 	camera.lookAt(scene.position);
 	uniforms.u_time.value = clock.getElapsedTime();
-	uniforms.u_frequency.value = analyser.getAverageFrequency();
-    bloomComposer.render();
+	
+	// 使用当前活动的音频分析器
+	if (audioAnalyser) {
+		uniforms.u_frequency.value = audioAnalyser.getAverageFrequency();
+	}
+	
+	bloomComposer.render();
 	requestAnimationFrame(animate);
 }
 animate();
