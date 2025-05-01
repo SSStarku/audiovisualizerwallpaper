@@ -109,30 +109,57 @@ export default class AudioManager {
     /**
      * Sets up the THREE.Audio object with the decoded buffer, configures
      * the AudioAnalyser, and starts playback.
-     * @param {AudioBuffer} buffer - The decoded audio data.
+     * @param {ArrayBuffer} audioData - The audio data to decode and play.
      * @private
      */
-    async _setupAndPlay(buffer) {
-        await this._ensureAudioContext(); // Ensure context is active
+    async _setupAndPlay(audioData) {
+        const context = await this._ensureAudioContext(); // Ensure context is active and get it
 
         // --- Stop microphone if active ---
         this._disconnectMicrophone(); 
 
-        this.sound.setBuffer(buffer); // Assign the decoded buffer to the sound source
-        this.sound.setLoop(true); // Loop the audio
-        this.sound.setVolume(0.5); // Set a default volume
-        
+        try {
+            // Decode the ArrayBuffer into an AudioBuffer
+            const audioBuffer = await context.decodeAudioData(audioData);
 
-        // Create a new THREE analyser for the currently playing sound
-        const fftSize = 64; 
-        // Use THREE.AudioAnalyser for file playback
-        this.audioAnalyser = new THREE.AudioAnalyser(this.sound, fftSize); 
-        // Clear native analyser reference if it exists from mic input
-        this.nativeAnalyser = null; 
-        console.log(`File audio loaded and playing. Analyser FFT size: ${fftSize}.`);
-        
-        // Start playback *after* setting up the analyser node connection internally by THREE
-        this.sound.play(); 
+            // --- Stop previous sound before setting new buffer ---
+            if (this.sound.isPlaying) {
+                this.sound.stop();
+            }
+             // --- Cleanup analyser before setting new buffer ---
+             if (this.audioAnalyser) {
+                 if (this.audioAnalyser.analyser) {
+                    try {
+                        // Disconnect the analyser node to prevent memory leaks or issues
+                        this.audioAnalyser.analyser.disconnect();
+                    } catch (error) {
+                        console.warn("Error disconnecting previous analyser before decode:", error);
+                    }
+                 }
+                 this.audioAnalyser = null; // Clear reference
+             }
+
+
+            this.sound.setBuffer(audioBuffer); // Assign the decoded AudioBuffer
+            this.sound.setLoop(true); // Loop the audio
+            this.sound.setVolume(0.5); // Set a default volume
+            
+
+            // Create a new THREE analyser for the currently playing sound
+            const fftSize = 64; 
+            // Use THREE.AudioAnalyser for file playback
+            this.audioAnalyser = new THREE.AudioAnalyser(this.sound, fftSize); 
+            // Clear native analyser reference if it exists from mic input
+            this.nativeAnalyser = null; 
+            console.log(`File audio decoded and playing. Analyser FFT size: ${fftSize}.`);
+            
+            // Start playback *after* setting up the buffer and analyser
+            this.sound.play(); 
+
+        } catch (error) {
+            console.error('Error decoding audio data:', error);
+            alert('无法解码音频文件！请尝试其他文件或格式。'); // User feedback
+        }
     }
 
     /**
