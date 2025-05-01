@@ -82,7 +82,7 @@ export default class SceneManager {
         });
 
         // Create the geometry (Icosahedron with more detail)
-        const geo = new THREE.IcosahedronGeometry(4, 30); // Radius 4, detail level 30
+        const geo = new THREE.IcosahedronGeometry(3, 30); // Radius 4, detail level 30
         this.mesh = new THREE.Mesh(geo, mat);
         this.scene.add(this.mesh);
     }
