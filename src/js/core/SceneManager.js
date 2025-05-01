@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import vertexShader from '../../shaders/vertex.glsl';
 import fragmentShader from '../../shaders/fragment.glsl';
+import ParticleEffect from '../effects/ParticleEffect';
 
 /**
  * Manages the core Three.js scene setup, including the scene graph,
@@ -40,10 +41,15 @@ export default class SceneManager {
 
         /** @type {THREE.Mesh | null} The main visualizer mesh (Icosahedron) */
         this.mesh = null; 
+        /** @type {ParticleEffect | null} The particle effect instance */
+        this.particleEffect = null;
+        /** @type {string} Name of the currently active visual effect */
+        this.activeEffectName = ''; // Will be set by setActiveEffect
         
         this._setupRenderer();
         this._setupCamera();
         this._createVisualizerMesh();
+        this._createParticleEffect();
     }
 
     /**
@@ -88,6 +94,30 @@ export default class SceneManager {
     }
 
     /**
+     * Creates the particle effect instance.
+     * @private
+     */
+    _createParticleEffect() {
+        this.particleEffect = new ParticleEffect(this.scene, { particleCount: 15000 }); // Pass the scene and options
+    }
+
+    /**
+     * Sets the active visual effect by controlling visibility.
+     * @param {string} effectName - The name of the effect to activate ('icosahedron' or 'particles').
+     */
+    setActiveEffect(effectName) {
+        this.activeEffectName = effectName;
+        console.log(`SceneManager: Activating effect ${effectName}`);
+
+        if (this.mesh) {
+            this.mesh.visible = (effectName === 'icosahedron');
+        }
+        if (this.particleEffect && this.particleEffect.particles) {
+            this.particleEffect.particles.visible = (effectName === 'particles');
+        }
+    }
+
+    /**
      * Updates scene elements based on time and interaction data.
      * Called in the main animation loop.
      * @param {number} deltaTime Time since the last frame.
@@ -108,6 +138,15 @@ export default class SceneManager {
         // Update the time uniform for shader animations
         // Frequency and color uniforms are updated via updateShaderUniforms
         // this.uniforms.u_time.value = elapsedTime;
+
+        // Update the active visual effect
+        const audioFrequency = this.uniforms.u_frequency.value;
+        if (this.activeEffectName === 'icosahedron' && this.mesh) {
+            // The mesh update is handled by the shader uniforms automatically (u_time, u_frequency)
+            // No specific update call needed here for the mesh itself, unless you add more logic
+        } else if (this.activeEffectName === 'particles' && this.particleEffect) {
+            this.particleEffect.update(deltaTime, elapsedTime, audioFrequency);
+        }
     }
 
     /**
@@ -122,6 +161,13 @@ export default class SceneManager {
         if (newUniforms.u_frequency !== undefined) {
              // Add safety check for NaN or invalid values from audio analysis
             this.uniforms.u_frequency.value = Number.isFinite(newUniforms.u_frequency) ? newUniforms.u_frequency : 0.0;
+
+            // Also update the particle effect when frequency changes (if needed immediately)
+            // Note: The main update loop already handles passing frequency to particleEffect.update
+            // This line might be redundant depending on desired responsiveness vs performance.
+            // if (this.particleEffect) {
+            //     this.particleEffect.update(0, this.uniforms.u_time.value, this.uniforms.u_frequency.value); 
+            // }
         }
         if (newUniforms.u_red !== undefined) {
             this.uniforms.u_red.value = newUniforms.u_red;
@@ -167,5 +213,35 @@ export default class SceneManager {
      */
     getScene() {
         return this.scene;
+    }
+
+    /**
+     * Cleans up resources, including the particle effect.
+     */
+    dispose() {
+        // Dispose existing mesh geometry and material if they exist
+        if (this.mesh) {
+            if (this.mesh.geometry) this.mesh.geometry.dispose();
+            if (this.mesh.material) {
+                // If ShaderMaterial, dispose uniforms if necessary (textures, etc.)
+                if (this.mesh.material instanceof THREE.ShaderMaterial) {
+                    // Assuming no complex uniforms like textures for now
+                }
+                this.mesh.material.dispose();
+            }
+            this.scene.remove(this.mesh);
+        }
+        
+        // Dispose particle effect
+        if (this.particleEffect) {
+            this.particleEffect.dispose();
+        }
+        
+        // Dispose renderer if needed (though typically managed elsewhere)
+        // if (this.renderer) {
+        //     this.renderer.dispose();
+        // }
+        
+        console.log("SceneManager disposed.");
     }
 } 

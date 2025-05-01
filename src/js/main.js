@@ -27,7 +27,8 @@ const effectParams = {
 	blue: 1.0,      // Initial blue color component
 	threshold: 0.5, // Initial bloom effect threshold
 	strength: 0.5,  // Initial bloom effect strength
-	radius: 0.8     // Initial bloom effect radius
+	radius: 0.8,    // Initial bloom effect radius
+	visualEffect: 'particles' // Initial visual effect ('icosahedron' or 'particles')
 };
 
 // --- Module Instances ---
@@ -80,10 +81,22 @@ function init() {
             if (postProcessor) {
                  postProcessor.updateParams(bloomParams);
             }
+        },
+        /** Switches the active visual effect via SceneManager */
+        onEffectChange: (effectName) => {
+            console.log('Switching effect to:', effectName);
+            if (sceneManager) {
+                sceneManager.setActiveEffect(effectName); 
+            }
         }
     };
     // Create the GUI, passing the initial parameters and the callbacks
     guiManager = new GuiManager(effectParams, guiCallbacks);
+
+    // Explicitly set the initial effect based on params
+    if (sceneManager) {
+        sceneManager.setActiveEffect(effectParams.visualEffect);
+    }
 
     // 5. Setup Event Listeners
     setupEventListeners();

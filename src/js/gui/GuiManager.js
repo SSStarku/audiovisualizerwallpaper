@@ -11,6 +11,7 @@ export default class GuiManager {
      * @param {object} callbacks - An object containing callback functions to execute when GUI values change.
      * @param {function(object): void} callbacks.onColorChange - Called when color parameters change.
      * @param {function(object): void} callbacks.onBloomChange - Called when bloom parameters change.
+     * @param {function(string): void} callbacks.onEffectChange - Called when the visual effect selection changes.
      */
     constructor(params, callbacks) {
         /** @type {GUI} The dat.gui instance */
@@ -22,6 +23,7 @@ export default class GuiManager {
 
         this._setupColorControls();
         this._setupBloomControls();
+        this._setupEffectControls();
     }
 
     /**
@@ -77,6 +79,21 @@ export default class GuiManager {
             }
         });
         // bloomFolder.open(); // Optional: Keep the folder open by default
+    }
+
+    /**
+     * Sets up the dat.gui control for selecting the visual effect.
+     * @private
+     */
+    _setupEffectControls() {
+        // Add control directly to the main GUI, not in a folder
+        this.gui.add(this.params, 'visualEffect', ['icosahedron', 'particles'])
+            .name('Visual Effect')
+            .onChange((value) => {
+                 if (this.callbacks.onEffectChange) {
+                     this.callbacks.onEffectChange(value); // Pass the selected effect name string
+                 }
+            });
     }
 
     // Optional: Method to hide/show GUI
