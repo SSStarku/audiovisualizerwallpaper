@@ -13,6 +13,7 @@ export default class ParticleEffect {
      * @param {number} [options.particleSize=0.1] - The size of each particle.
      * @param {number} [options.maxKickForce=10] - Maximum upward force applied based on audio frequency.
      * @param {number} [options.gravity=-9.8] - Gravity force applied to particles.
+     * @param {THREE.Color} [options.initialColor=0xffffff] - The initial color for the particles.
      */
     constructor(scene, options = {}) {
         this.scene = scene;
@@ -22,6 +23,8 @@ export default class ParticleEffect {
         this.particleSize = options.particleSize || 0.01;
         this.maxKickForce = options.maxKickForce || 10; // Controls jump height sensitivity
         this.gravity = options.gravity || -19.8;        // Controls how fast particles fall
+        // Store the initial color, default to white if not provided
+        this.initialColor = options.initialColor || new THREE.Color(0xffffff); 
 
         this.particles = null; 
         this.geometry = null; 
@@ -45,7 +48,7 @@ export default class ParticleEffect {
         const positions = new Float32Array(this.particleCount * 3); // x, y, z
 
         // --- Define a small radius for initial spawn at the center ---
-        const initialSpawnRadius = 0.01; // Very small radius for starting cluster
+        const initialSpawnRadius = 1.0; // Set initial spawn radius to 1 unit
 
         // Initialize positions clustered at the center on the XZ plane (y=0)
         for (let i = 0; i < this.particleCount; i++) {
@@ -66,7 +69,7 @@ export default class ParticleEffect {
         // this.geometry.setAttribute('velocity', new THREE.BufferAttribute(this.velocities, 1)); 
 
         this.material = new THREE.PointsMaterial({
-            color: 0xffffff,
+            color: this.initialColor, // Use initial color from options
             size: this.particleSize,
             transparent: true,
             opacity: 0.8,
@@ -102,7 +105,7 @@ export default class ParticleEffect {
         // --- New parameters for radial expansion ---
         const expansionSpeed = 2.0; // Base speed of outward movement
         const resetRadius = this.radius * 1.5; // Radius at which particles reset to center
-        const centerSpawnRadius = 0.1; // Small radius around the center for respawning
+        const centerSpawnRadius = 0.05; // Restore respawn radius to 0.1
         const dampeningFactor = 0.98; // Slows down outward speed over time (optional, might need adjustment)
         // Pre-calculate squared spawn radius for efficiency
         const centerSpawnRadiusSq = centerSpawnRadius * centerSpawnRadius; 
@@ -169,6 +172,16 @@ export default class ParticleEffect {
 
         // Important: Mark the position attribute as needing update for Three.js
         this.geometry.attributes.position.needsUpdate = true;
+    }
+
+    /**
+     * Updates the color of the particle material.
+     * @param {THREE.Color} newColor - The new color to apply.
+     */
+    updateColor(newColor) {
+        if (this.material) {
+            this.material.color.copy(newColor);
+        }
     }
 
     /**

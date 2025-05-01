@@ -73,7 +73,9 @@ export default class SceneManager {
      * @private
      */
     _setupCamera() {
-        this.camera.position.set(0, -2, 14); // Position the camera
+        // Position camera above (positive Y) and back (positive Z) looking down at origin
+        // Setting Y=Z gives a 45-degree angle looking down from the vertical
+        this.camera.position.set(0, 10, 10); // Position the camera at (0, 10, 10)
         this.camera.lookAt(0, 0, 0); // Point the camera at the scene center
         // Note: The AudioListener is added in AudioManager, passing this camera.
     }
@@ -113,7 +115,16 @@ export default class SceneManager {
      * @private
      */
     _createParticleEffect() {
-        this.particleEffect = new ParticleEffect(this.scene, { particleCount: 15000 }); // Pass the scene and options
+        // Pass initial color from uniforms
+        const initialColor = new THREE.Color(
+            this.uniforms.u_red.value, 
+            this.uniforms.u_green.value, 
+            this.uniforms.u_blue.value
+        );
+        this.particleEffect = new ParticleEffect(this.scene, { 
+            particleCount: 50000,
+            initialColor: initialColor // Pass the initial color object
+        }); 
     }
 
     /**
@@ -187,6 +198,16 @@ export default class SceneManager {
         }
         if (newUniforms.u_blue !== undefined) {
             this.uniforms.u_blue.value = newUniforms.u_blue;
+        }
+        
+        // Update particle color if the effect exists and colors changed
+        if (this.particleEffect && (newUniforms.u_red !== undefined || newUniforms.u_green !== undefined || newUniforms.u_blue !== undefined)) {
+             const newColor = new THREE.Color(
+                 this.uniforms.u_red.value, 
+                 this.uniforms.u_green.value, 
+                 this.uniforms.u_blue.value
+             );
+             this.particleEffect.updateColor(newColor);
         }
     }
 
