@@ -25,8 +25,8 @@ const effectParams = {
 	red: 1.0,       // Initial red color component for the shader
 	green: 1.0,     // Initial green color component
 	blue: 1.0,      // Initial blue color component
-	threshold: 0.5, // Initial bloom effect threshold
-	strength: 0.5,  // Initial bloom effect strength
+	threshold: 0.3, // Adjusted bloom effect threshold
+	strength: 0.25,  // Adjusted bloom effect strength
 	radius: 0.8,    // Initial bloom effect radius
 	visualEffect: 'icosahedron' // Change default to icosahedron
 };
