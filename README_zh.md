@@ -1,8 +1,10 @@
 # 3D 音频可视化工具
 
-基于 Franks Laboratory 的教程 "How To Create A 3D Audio Visualizer Using Three.js"：https://youtu.be/qDIF2z_VtHs
+基于 WaelYasmina 的教程 "How To Create A 3D Audio Visualizer Using Three.js"：https://youtu.be/qDIF2z_VtHs
 
 本项目演示了一个使用 Three.js、WebGL 着色器和 Web Audio API 构建的 3D 音频可视化工具。代码已被重构为模块化结构，以提高可维护性和可理解性。
+
+🎮 [在线演示](https://av.kuhungio.me/)
 
 ## 功能特性
 
@@ -12,6 +14,14 @@
 * 应用辉光（Bloom）后期处理效果。
 * 允许用户上传自己的音频文件。
 * 通过 dat.gui 提供交互式控件来调整颜色和辉光参数。
+
+## 技术栈
+
+* **Three.js** - 3D 图形渲染
+* **Web Audio API** - 音频处理和分析
+* **WebGL Shaders** - GLSL 着色器实现视觉效果
+* **dat.GUI** - 交互式控制界面
+* **Parcel** - 项目打包和构建
 
 ## 项目结构
 
@@ -78,3 +88,35 @@ audiovisualizer/
 * 点击"选择文件"按钮上传一个音频文件（例如 MP3、WAV）。
 * 使用右上角的控件（dat.gui 面板）调整颜色以及辉光效果的强度/半径/阈值。
 * 移动鼠标可以轻微改变相机视角。
+
+### 参数调整说明
+
+* **颜色设置**
+  - 背景色：调整场景的背景颜色
+  - 主体色：调整可视化网格的主要颜色
+  - 辅助色：调整粒子效果的颜色
+
+* **辉光效果**
+  - 强度：控制辉光效果的整体强度
+  - 半径：控制辉光效果的扩散范围
+  - 阈值：控制产生辉光效果的亮度阈值
+
+## 贡献指南
+
+欢迎提交 Pull Request 来改进这个项目！以下是贡献步骤：
+
+1. Fork 这个仓库
+2. 创建你的特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交你的改动 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启一个 Pull Request
+
+## 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
+
+## 致谢
+
+* [WaelYasmina](https://www.youtube.com/@WaelYasmina) - 原始教程作者
+* [Three.js](https://threejs.org/) - 3D 图形库
+* [dat.GUI](https://github.com/dataarts/dat.gui) - 轻量级 UI 控件库

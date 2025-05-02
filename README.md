@@ -1,16 +1,27 @@
 # 3D Audio Visualizer
 
-Based on the tutorial "How To Create A 3D Audio Visualizer Using Three.js" by Franks Laboratory: https://youtu.be/qDIF2z_VtHs
+Based on the tutorial "How To Create A 3D Audio Visualizer Using Three.js" by WaelYasmina: https://youtu.be/qDIF2z_VtHs
 
 This project demonstrates a 3D audio visualizer built with Three.js, WebGL shaders, and the Web Audio API. It has been refactored into a modular structure for better maintainability and understanding.
+
+🎮 [Live Demo](https://av.kuhungio.me/)
 
 ## Features
 
 *   Real-time 3D visualization reacting to audio frequency.
+*   **New:** Particle effect simulating water ripples, particles generate from the center and spread outward based on audio frequency.
 *   Uses Perlin noise in the vertex shader for mesh displacement.
 *   Applies a Bloom post-processing effect.
 *   Allows users to upload their own audio files.
 *   Interactive controls for color and bloom parameters via dat.gui.
+
+## Tech Stack
+
+*   **Three.js** - 3D graphics rendering
+*   **Web Audio API** - Audio processing and analysis
+*   **WebGL Shaders** - GLSL shaders for visual effects
+*   **dat.GUI** - Interactive control interface
+*   **Parcel** - Project bundling and building
 
 ## Project Structure
 
@@ -72,3 +83,35 @@ audiovisualizer/
 *   Click the "Choose File" button to upload an audio file (e.g., MP3, WAV).
 *   Use the controls in the top-right corner (dat.gui panel) to adjust the colors and the intensity/radius/threshold of the bloom effect.
 *   Move the mouse to slightly change the camera angle.
+
+### Parameter Adjustment Guide
+
+*   **Color Settings**
+    - Background Color: Adjust the scene background color
+    - Primary Color: Adjust the main color of the visualization mesh
+    - Secondary Color: Adjust the color of particle effects
+
+*   **Bloom Effect**
+    - Intensity: Control the overall strength of the bloom effect
+    - Radius: Control the spread range of the bloom effect
+    - Threshold: Control the brightness threshold for bloom effect
+
+## Contributing
+
+Contributions are welcome! Here's how you can help:
+
+1.  Fork the repository
+2.  Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4.  Push to the branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
+
+## Acknowledgments
+
+*   [WaelYasmina](https://www.youtube.com/@WaelYasmina) - Original tutorial creator
+*   [Three.js](https://threejs.org/) - 3D graphics library
+*   [dat.GUI](https://github.com/dataarts/dat.gui) - Lightweight UI controls library
