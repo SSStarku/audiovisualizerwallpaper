@@ -150,6 +150,8 @@ function init() {
 function setupEventListeners() {
     window.addEventListener('resize', onWindowResize);
     document.addEventListener('mousemove', onMouseMove);
+    // Add touch event listener for mobile compatibility
+    document.addEventListener('touchmove', onTouchMove, { passive: false }); 
     // Note: File input is now triggered via GuiManager and handled in init()
 }
 
@@ -179,6 +181,25 @@ function onMouseMove(event) {
     mouseX = (event.clientX - windowHalfX) / windowHalfX; // Normalize X
     mouseY = (event.clientY - windowHalfY) / windowHalfY; // Normalize Y (inverted for typical 3D coordinate systems)
     // Adjust sensitivity/scaling if needed: e.g., mouseX /= 2;
+}
+
+/**
+ * Handles touch movement events on mobile devices.
+ * Updates normalized mouse coordinates (mouseX, mouseY) based on the first touch point.
+ * Prevents default scroll behavior.
+ * @param {TouchEvent} event
+ */
+function onTouchMove(event) {
+    // Prevent the default touch action (like scrolling)
+    event.preventDefault(); 
+
+    if (event.touches.length > 0) {
+        const touch = event.touches[0]; // Get the first touch point
+        const windowHalfX = window.innerWidth / 2;
+        const windowHalfY = window.innerHeight / 2;
+        mouseX = (touch.clientX - windowHalfX) / windowHalfX; // Normalize X
+        mouseY = (touch.clientY - windowHalfY) / windowHalfY; // Normalize Y 
+    }
 }
 
 // --- Animation Loop ---
