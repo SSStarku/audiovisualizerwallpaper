@@ -28,7 +28,7 @@ const effectParams = {
 	threshold: 0.5, // Initial bloom effect threshold
 	strength: 0.5,  // Initial bloom effect strength
 	radius: 0.8,    // Initial bloom effect radius
-	visualEffect: 'particles' // Initial visual effect ('icosahedron' or 'particles')
+	visualEffect: 'icosahedron' // Change default to icosahedron
 };
 
 // --- Module Instances ---
@@ -71,6 +71,12 @@ function init() {
     
     // 2. Initialize Audio (needs the camera from SceneManager for the listener)
     audioManager = new AudioManager(sceneManager.getCamera()); 
+
+    // Load and play the default greeting audio
+    // Using .then() because loadAndPlayUrl is async, although we don't strictly need to wait here.
+    audioManager.loadAndPlayUrl('assets/multilingual_greetings.mp3')
+        .then(() => console.log('Default audio playback initiated.'))
+        .catch(err => console.error('Failed to initiate default audio playback:', err));
     
     // 3. Initialize Post-Processing (needs renderer, scene, camera, and initial params)
     postProcessor = new PostProcessor(
