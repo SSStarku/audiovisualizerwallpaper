@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import SceneManager from './core/SceneManager';
 import AudioManager from './audio/AudioManager';
-import GuiManager from './gui/GuiManager';
+// import GuiManager from './gui/GuiManager';
 import PostProcessor from './effects/PostProcessor';
 
 /**
@@ -18,6 +18,8 @@ console.log('main.js loaded');
 let mouseX = 0;
 /** @type {number} Normalized mouse Y position (-1 to 1, approx) */
 let mouseY = 0;
+/** @type {Float32Array} Array to hold audio data from Lively API */
+let livelyAudioData = new Float32Array();
 
 // Central object to hold parameters controllable by the GUI.
 // This makes it easy to pass initial values and link GUI updates.
@@ -37,35 +39,16 @@ const effectParams = {
 let sceneManager = null;
 /** @type {AudioManager | null} */
 let audioManager = null;
-/** @type {GuiManager | null} */
-let guiManager = null;
 /** @type {PostProcessor | null} */
 let postProcessor = null;
 /** @type {THREE.Clock} Used for getting delta time and elapsed time */
 const clock = new THREE.Clock();
-/** @type {HTMLInputElement | null} Hidden file input for audio */
-let hiddenFileInput = null;
 
 // --- Initialization Function ---
 /**
  * Initializes all application modules and starts the animation loop.
  */
 function init() {
-    // --- Create Hidden File Input ---
-    hiddenFileInput = document.createElement('input');
-    hiddenFileInput.type = 'file';
-    hiddenFileInput.accept = 'audio/*';
-    hiddenFileInput.style.display = 'none'; // Keep it hidden
-    hiddenFileInput.addEventListener('change', (event) => {
-        const file = event.target.files[0];
-        if (file && audioManager) {
-            audioManager.loadAndPlayFile(file);
-        }
-        // Reset the input value to allow uploading the same file again
-        event.target.value = null; 
-    });
-    document.body.appendChild(hiddenFileInput); // Add it to the DOM
-
     // 1. Initialize Core Scene
     sceneManager = new SceneManager(); 
     
@@ -74,9 +57,7 @@ function init() {
 
     // Load and play the default greeting audio
     // Using .then() because loadAndPlayUrl is async, although we don't strictly need to wait here.
-    audioManager.loadAndPlayUrl('assets/multilingual_greetings.mp3')
-        .then(() => console.log('Default audio playback initiated.'))
-        .catch(err => console.error('Failed to initiate default audio playback:', err));
+
     
     // 3. Initialize Post-Processing (needs renderer, scene, camera, and initial params)
     postProcessor = new PostProcessor(
@@ -92,43 +73,30 @@ function init() {
 
     // 4. Initialize GUI
     // Define callback functions that GuiManager will call when sliders change.
-    const guiCallbacks = {
-        /** Updates shader color uniforms via SceneManager */
-        onColorChange: (colorParams) => {
-            if (sceneManager) {
-                 sceneManager.updateShaderUniforms(colorParams);
-            }
-        },
-        /** Updates bloom effect parameters via PostProcessor */
-        onBloomChange: (bloomParams) => {
-            if (postProcessor) {
-                 postProcessor.updateParams(bloomParams);
-            }
-        },
-        /** Switches the active visual effect via SceneManager */
-        onEffectChange: (effectName) => {
-            console.log('Switching effect to:', effectName);
-            if (sceneManager) {
-                sceneManager.setActiveEffect(effectName); 
-            }
-        },
-        /** Triggers the hidden file input click */
-        onFileUploadRequest: () => {
-            if (hiddenFileInput) {
-                hiddenFileInput.click();
-            }
-        },
-        /** Triggers the microphone input start */
-        onMicInputRequest: () => {
-            // Call startMicrophoneInput on the audioManager instance
-            // Use optional chaining and an arrow function to preserve `this` context implicitly
-            if (audioManager) {
-                audioManager.startMicrophoneInput(); 
-            }
-        }
-    };
+    // const guiCallbacks = {
+    //     /** Updates shader color uniforms via SceneManager */
+    //     onColorChange: (colorParams) => {
+    //         if (sceneManager) {
+    //              sceneManager.updateShaderUniforms(colorParams);
+    //         }
+    //     },
+    //     /** Updates bloom effect parameters via PostProcessor */
+    //     onBloomChange: (bloomParams) => {
+    //         if (postProcessor) {
+    //              postProcessor.updateParams(bloomParams);
+    //         }
+    //     },
+    //     /** Switches the active visual effect via SceneManager */
+    //     onEffectChange: (effectName) => {
+    //         console.log('Switching effect to:', effectName);
+    //         if (sceneManager) {
+    //             sceneManager.setActiveEffect(effectName);
+    //         }
+    //     },
+
+    // };
     // Create the GUI, passing the initial parameters and the callbacks
-    guiManager = new GuiManager(effectParams, guiCallbacks);
+    // guiManager = new GuiManager(effectParams, guiCallbacks);
 
     // Explicitly set the initial effect based on params
     if (sceneManager) {
@@ -202,6 +170,69 @@ function onTouchMove(event) {
     }
 }
 
+// --- Lively API Integration ---
+/**
+ * Receives audio data from Lively Wallpaper.
+ * @param {Float32Array} audioArray - An array of audio frequency data.
+ */
+function livelyAudioListener(audioArray) {
+    livelyAudioData = audioArray;
+    if (audioManager) {
+        audioManager.setLivelyAudioData(audioArray);
+    }
+}
+
+/**
+ * Receives property changes from Lively Wallpaper.
+ * @param {string} name - The name of the property that changed.
+ * @param {*} val - The new value of the property.
+ */
+function livelyPropertyListener(name, val) {
+    console.log(`Lively property changed: ${name} = ${val}`);
+    switch (name) {
+        case "lineColor":
+            // Assuming lineColor is a hex string like "#RRGGBB"
+            // Convert hex to RGB and update effectParams or sceneManager directly
+            // Example:
+            // const color = new THREE.Color(val);
+            // effectParams.red = color.r;
+            // effectParams.green = color.g;
+            // effectParams.blue = color.b;
+            // if (sceneManager) {
+            //     sceneManager.updateShaderUniforms({ red: color.r, green: color.g, blue: color.b });
+            // }
+            break;
+        case "backgroundColor":
+            // Handle background color change if needed
+            break;
+        case "square":
+            // Handle square property if needed
+            break;
+        case "bloomThreshold":
+            if (postProcessor) {
+                postProcessor.updateParams({ threshold: parseFloat(val) });
+            }
+            break;
+        case "bloomStrength":
+            if (postProcessor) {
+                postProcessor.updateParams({ strength: parseFloat(val) });
+            }
+            break;
+        case "bloomRadius":
+            if (postProcessor) {
+                postProcessor.updateParams({ radius: parseFloat(val) });
+            }
+            break;
+        case "visualEffect":
+            if (sceneManager) {
+                sceneManager.setActiveEffect(val);
+            }
+            break;
+        // Add more cases for other Lively properties as needed
+    }
+}
+
+
 // --- Animation Loop ---
 /**
  * Starts the main animation loop using requestAnimationFrame.
@@ -220,8 +251,10 @@ function startAnimationLoop() {
 
         // --- Get Input Data ---
         // Fetch the latest average audio frequency from the AudioManager
-        const audioFrequency = audioManager ? audioManager.getAverageFrequency() : 0;
-        
+        // const audioFrequency = audioManager ? audioManager.getAverageFrequency() : 0;
+        // Use Lively audio data directly
+        const audioFrequency = audioManager ? audioManager.getAverageFrequencyFromLively() : 0;
+
         // --- Update Modules ---
         if (sceneManager) {
             // Update scene elements (e.g., camera position based on mouse)
@@ -247,4 +280,4 @@ function startAnimationLoop() {
 
 // --- Start the application --- 
 // Ensure DOM is ready or run after DOMContentLoaded if necessary, though modules handle DOM appending.
-init(); 
+init();
