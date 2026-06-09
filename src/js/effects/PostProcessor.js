@@ -13,7 +13,7 @@ export default class PostProcessor {
      * Creates a PostProcessor instance.
      * @param {THREE.WebGLRenderer} renderer - The main WebGL renderer.
      * @param {THREE.Scene} scene - The main scene to be rendered.
-     * @param {THREE.Camera} camera - The main camera used for rendering.
+     * @param {PerspectiveCamera} camera - The main camera used for rendering.
      * @param {object} initialParams - Initial parameters for the effects (e.g., bloom settings).
      * @param {number} initialParams.threshold - Initial bloom threshold.
      * @param {number} initialParams.strength - Initial bloom strength.

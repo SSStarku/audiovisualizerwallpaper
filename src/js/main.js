@@ -21,8 +21,7 @@ let mouseY = 0;
 /** @type {Float32Array} Array to hold audio data from Lively API */
 let livelyAudioData = new Float32Array();
 
-// Central object to hold parameters controllable by the GUI.
-// This makes it easy to pass initial values and link GUI updates.
+
 const effectParams = {
 	red: 1.0,       // Initial red color component for the shader
 	green: 1.0,     // Initial green color component
@@ -30,8 +29,13 @@ const effectParams = {
 	threshold: 0.3, // Adjusted bloom effect threshold
 	strength: 0.25,  // Adjusted bloom effect strength
 	radius: 0.8,    // Initial bloom effect radius
-	visualEffect: 'icosahedron' // Change default to icosahedron
+	visualEffect: 'icosahedron', // Change default to icosahedron
+    zoom: 0.0,      // Initial zoom value
+    intensity: 25  //Intial sound intensity
 };
+
+
+const visualEffectItems = ["icosahedron", "particles"];
 
 // --- Module Instances ---
 // Declare module variables in the outer scope
@@ -44,22 +48,17 @@ let postProcessor = null;
 /** @type {THREE.Clock} Used for getting delta time and elapsed time */
 const clock = new THREE.Clock();
 
-// --- Initialization Function ---
+
 /**
  * Initializes all application modules and starts the animation loop.
  */
 function init() {
-    // 1. Initialize Core Scene
+
     sceneManager = new SceneManager(); 
     
-    // 2. Initialize Audio (needs the camera from SceneManager for the listener)
+
     audioManager = new AudioManager(sceneManager.getCamera()); 
 
-    // Load and play the default greeting audio
-    // Using .then() because loadAndPlayUrl is async, although we don't strictly need to wait here.
-
-    
-    // 3. Initialize Post-Processing (needs renderer, scene, camera, and initial params)
     postProcessor = new PostProcessor(
         sceneManager.getRenderer(), 
         sceneManager.getScene(), 
@@ -71,47 +70,20 @@ function init() {
         } // Pass initial bloom params
     );
 
-    // 4. Initialize GUI
-    // Define callback functions that GuiManager will call when sliders change.
-    // const guiCallbacks = {
-    //     /** Updates shader color uniforms via SceneManager */
-    //     onColorChange: (colorParams) => {
-    //         if (sceneManager) {
-    //              sceneManager.updateShaderUniforms(colorParams);
-    //         }
-    //     },
-    //     /** Updates bloom effect parameters via PostProcessor */
-    //     onBloomChange: (bloomParams) => {
-    //         if (postProcessor) {
-    //              postProcessor.updateParams(bloomParams);
-    //         }
-    //     },
-    //     /** Switches the active visual effect via SceneManager */
-    //     onEffectChange: (effectName) => {
-    //         console.log('Switching effect to:', effectName);
-    //         if (sceneManager) {
-    //             sceneManager.setActiveEffect(effectName);
-    //         }
-    //     },
 
-    // };
-    // Create the GUI, passing the initial parameters and the callbacks
-    // guiManager = new GuiManager(effectParams, guiCallbacks);
-
-    // Explicitly set the initial effect based on params
     if (sceneManager) {
         sceneManager.setActiveEffect(effectParams.visualEffect);
     }
 
-    // 5. Setup Event Listeners
+
     setupEventListeners();
     
-    // 6. Start the Animation Loop
+
     startAnimationLoop(); 
     console.log('Initialization complete.');
 }
 
-// --- Event Listeners Setup ---
+
 /**
  * Sets up global event listeners (window resize, mouse move).
  */
@@ -143,12 +115,12 @@ function onWindowResize() {
  * @param {MouseEvent} event
  */
 function onMouseMove(event) {
-    // Convert mouse position to normalized device coordinates (-1 to +1 range approx)
+
     const windowHalfX = window.innerWidth / 2;
     const windowHalfY = window.innerHeight / 2;
     mouseX = (event.clientX - windowHalfX) / windowHalfX; // Normalize X
     mouseY = (event.clientY - windowHalfY) / windowHalfY; // Normalize Y (inverted for typical 3D coordinate systems)
-    // Adjust sensitivity/scaling if needed: e.g., mouseX /= 2;
+
 }
 
 /**
@@ -170,7 +142,7 @@ function onTouchMove(event) {
     }
 }
 
-// --- Lively API Integration ---
+
 /**
  * Receives audio data from Lively Wallpaper.
  * @param {Float32Array} audioArray - An array of audio frequency data.
@@ -181,6 +153,7 @@ function livelyAudioListener(audioArray) {
         audioManager.setLivelyAudioData(audioArray);
     }
 }
+window.livelyAudioListener = livelyAudioListener; // Expose to global scope
 
 /**
  * Receives property changes from Lively Wallpaper.
@@ -193,21 +166,17 @@ function livelyPropertyListener(name, val) {
         case "lineColor":
             // Assuming lineColor is a hex string like "#RRGGBB"
             // Convert hex to RGB and update effectParams or sceneManager directly
-            // Example:
-            // const color = new THREE.Color(val);
-            // effectParams.red = color.r;
-            // effectParams.green = color.g;
-            // effectParams.blue = color.b;
-            // if (sceneManager) {
-            //     sceneManager.updateShaderUniforms({ red: color.r, green: color.g, blue: color.b });
-            // }
+            const color = new THREE.Color(val);
+            effectParams.red = color.r;
+            effectParams.green = color.g;
+            effectParams.blue = color.b;
+            if (sceneManager) {
+                sceneManager.updateShaderUniforms({ u_red: color.r, u_green: color.g, u_blue: color.b });
+                break;
+            }
             break;
-        case "backgroundColor":
-            // Handle background color change if needed
-            break;
-        case "square":
-            // Handle square property if needed
-            break;
+
+
         case "bloomThreshold":
             if (postProcessor) {
                 postProcessor.updateParams({ threshold: parseFloat(val) });
@@ -225,13 +194,29 @@ function livelyPropertyListener(name, val) {
             break;
         case "visualEffect":
             if (sceneManager) {
-                sceneManager.setActiveEffect(val);
+
+                const selectedEffect = visualEffectItems[val];
+                if (selectedEffect) {
+                    sceneManager.setActiveEffect(selectedEffect);
+                }
             }
             break;
-        // Add more cases for other Lively properties as needed
+        case "zoom":
+            if (sceneManager) {
+                sceneManager.setCameraZoom(parseFloat(val));
+            }
+            break;
+        case "intensity":
+            effectParams.intensity = parseFloat(val);
+
+            if (audioManager) {
+                audioManager.setLivelyIntensity(effectParams.intensity);
+            }
+            break;
+
     }
 }
-
+window.livelyPropertyListener = livelyPropertyListener; // Expose to global scope
 
 // --- Animation Loop ---
 /**
@@ -245,7 +230,7 @@ function startAnimationLoop() {
     function animate() {
         requestAnimationFrame(animate); // Schedule the next frame
 
-        // Calculate time delta and elapsed time for animations
+
         const deltaTime = clock.getDelta();
         const elapsedTime = clock.getElapsedTime();
 

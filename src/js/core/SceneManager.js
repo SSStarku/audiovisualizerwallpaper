@@ -144,6 +144,78 @@ export default class SceneManager {
     }
 
     /**
+     * Sets the background color of the scene.
+     * @param {string} colorHex - The color in hexadecimal format (e.g., "#RRGGBB").
+     */
+    setBackgroundColor(colorHex) {
+        this.scene.background = new THREE.Color(colorHex);
+    }
+
+    /**
+     * Adjusts the camera's position based on a zoom value.
+     * @param {number} zoomValue - The zoom value, typically from a slider (e.g., 0 to 100).
+     */
+    setCameraZoom(zoomValue) {
+        // Map the slider value (e.g., 0-100) to a suitable camera distance.
+        // You'll need to adjust these values based on your scene's scale and desired zoom effect.
+        const minZoomDistance = 5; // Closest zoom
+        const maxZoomDistance = 20; // Furthest zoom
+
+        // Invert the zoomValue if 0 means furthest and 100 means closest
+        const normalizedZoom = 1 - (zoomValue / 100); // 1.0 at zoom 0, 0.0 at zoom 100
+
+        const targetDistance = minZoomDistance + (maxZoomDistance - minZoomDistance) * normalizedZoom;
+
+        // Assuming the camera is looking at the origin (0,0,0)
+        // We can move the camera along its current direction vector.
+        // For simplicity, let's just adjust the Z position if it's a simple scene.
+        // If using OrbitControls, you might want to adjust controls.target or controls.object.position
+
+        // A simple approach: adjust camera Z position directly
+        // This might not work well if the camera is rotated.
+        // this.camera.position.z = targetDistance;
+
+        // A better approach for OrbitControls: adjust the camera's distance from its target
+        if (this.controls) {
+            // Store the original lookAt point (usually 0,0,0)
+            const lookAtPoint = new THREE.Vector3(0, 0, 0);
+
+            // Calculate the direction vector from the lookAt point to the camera
+            const direction = new THREE.Vector3().subVectors(this.camera.position, lookAtPoint).normalize();
+
+            // Set the new camera position along this direction vector
+            this.camera.position.copy(direction).multiplyScalar(targetDistance);
+
+            // Ensure controls are updated to reflect the new camera position
+            this.controls.update();
+        }
+
+        this.camera.updateProjectionMatrix(); // Important to update after changing position
+    }
+
+    /**
+     * Toggles between icosahedron and cube geometry for the main visualizer mesh.
+     * @param {boolean} isSquare - If true, sets the mesh to a cube; otherwise, sets it to an icosahedron.
+     */
+    setSquareMode(isSquare) {
+        if (this.mesh) {
+            this.scene.remove(this.mesh); // Remove current mesh
+            this.mesh.geometry.dispose(); // Dispose of old geometry
+            this.mesh.material.dispose(); // Dispose of old material
+
+            const newGeometry = isSquare ? new THREE.BoxGeometry(4, 4, 4, 30, 30, 30) : new THREE.IcosahedronGeometry(3, 30);
+            const newMaterial = new THREE.ShaderMaterial({
+                uniforms: this.uniforms,
+                vertexShader: vertexShader,
+                fragmentShader: fragmentShader,
+                wireframe: true
+            });
+            this.mesh = new THREE.Mesh(newGeometry, newMaterial);
+            this.scene.add(this.mesh);
+        }
+    }
+
+    /**
      * Updates scene elements based on time and interaction data.
      * Called in the main animation loop.
      * @param {number} deltaTime Time since the last frame.
@@ -280,4 +352,4 @@ export default class SceneManager {
         
         console.log("SceneManager disposed.");
     }
-} 
+}
