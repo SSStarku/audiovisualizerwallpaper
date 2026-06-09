@@ -1,23 +1,19 @@
 # 3D Audio Visualizer
 
-Based on the tutorial "How To Create A 3D Audio Visualizer Using Three.js" by WaelYasmina: https://youtu.be/qDIF2z_VtHs
+Based on the tutorial "How To Create A 3D Audio Visualizer Using Three.js" by WaelYasmina: https://youtu.be/qDIF2z_VtHs 
 
 This project demonstrates a 3D audio visualizer built with Three.js, WebGL shaders, and the Web Audio API. It has been refactored into a modular structure for better maintainability and understanding.
 
-A Chinese version of this README is available at [README_zh.md](README_zh.md).
-
-🎮 [Live Demo](https://av.kuhungio.me/)
 
 ![Online Example](online_example.gif)
 
 ## Features
 
-* Real-time 3D visualization reacting to audio frequency.
-* **New:** Particle effect simulating water ripples, particles generate from the center and spread outward based on audio frequency.
+* Real-time 3D visualization reacting to audio frequency **FROM YOUR COMPUTER**.
+* Particle effect simulating water ripples, particles generate from the center and spread outward based on audio frequency.
 * Uses Perlin noise in the vertex shader for mesh displacement.
 * Applies a Bloom post-processing effect.
-* Allows users to upload their own audio files.
-* Interactive controls for color and bloom parameters via dat.gui.
+* Interactive controls for color and bloom parameters via lively wallpaper.
 
 ## Tech Stack
 
@@ -53,7 +49,6 @@ audiovisualizer/
 * **`main.js`**: Initializes all modules, manages the main animation loop, and coordinates interactions between modules.
 * **`core/SceneManager.js`**: Sets up the Three.js scene, camera, renderer, and the main visualizer mesh (Icosahedron). Manages shader uniforms.
 * **`audio/AudioManager.js`**: Handles audio file uploads, decoding, playback using the Web Audio API, and real-time frequency analysis via `THREE.AudioAnalyser`.
-* **`gui/GuiManager.js`**: Creates the `dat.gui` interface for controlling visual parameters (colors, bloom effect).
 * **`effects/PostProcessor.js`**: Manages the post-processing pipeline using `THREE.EffectComposer`, including the `UnrealBloomPass`.
 * **`shaders/vertex.glsl`**: Vertex shader implementing Perlin noise for mesh displacement based on time and audio frequency.
 * **`shaders/fragment.glsl`**: Simple fragment shader applying colors based on uniforms.
@@ -88,8 +83,9 @@ audiovisualizer/
 
 ## Usage
 
-* Click the "Choose File" button to upload an audio file (e.g., MP3, WAV).
-* Use the controls in the top-right corner (dat.gui panel) to adjust the colors and the intensity/radius/threshold of the bloom effect.
+* Download the last files from `Releases`.
+* Put them in lively wallpaper-
+* Use the controls in lively wallpaper to adjust the colors, the intensity/radius/threshold of the bloom effect and zoom.
 * Move the mouse to slightly change the camera angle.
 
 ### Parameter Adjustment Guide
@@ -104,6 +100,8 @@ audiovisualizer/
   - Intensity: Control the overall strength of the bloom effect
   - Radius: Control the spread range of the bloom effect
   - Threshold: Control the brightness threshold for bloom effect
+ * **Zoom**
+  - Zooming: Control the overall strength of the zoom effect
 
 ## Contributing
 
@@ -115,12 +113,10 @@ Contributions are welcome! Here's how you can help:
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
 
 ## Acknowledgments
-
+* [rocksdanister](https://github.com/rocksdanister/lively) - Lively creator
+* [Yomaser](https://github.com/yomaser/audiovisualizer) -  Fork creator
 * [WaelYasmina](https://www.youtube.com/@WaelYasmina) - Original tutorial creator
 * [Three.js](https://threejs.org/) - 3D graphics library
 * [dat.GUI](https://github.com/dataarts/dat.gui) - Lightweight UI controls library
