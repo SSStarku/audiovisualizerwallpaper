@@ -6,7 +6,7 @@ This project demonstrates a 3D audio visualizer built with Three.js, WebGL shade
 
 
 ![Online Example](online_example.gif)
-![Online Example](online_example2.gif)
+![Online Example2](online_example2.gif)
 
 ## Features
 
